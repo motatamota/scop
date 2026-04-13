@@ -1,0 +1,12 @@
+[package]
+name = "scop"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "scop"
+path = "src/main.rs"
+
+[dependencies]
+glfw = "0.54"
+gl   = "0.14"
