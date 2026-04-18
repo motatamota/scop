@@ -41,6 +41,9 @@ PFNGLUNIFORM3FPROC               glUniform3f               = nullptr;
 PFNGLUNIFORM1IPROC               glUniform1i               = nullptr;
 PFNGLUNIFORM1FPROC               glUniform1f               = nullptr;
 
+// テクスチャ系（3.0以降）
+PFNGLGENERATEMIPMAPPROC          glGenerateMipmap          = nullptr;
+
 #define LOAD(name)                                                      \
     name = reinterpret_cast<decltype(name)>(glfwGetProcAddress(#name)); \
     if (!name) {                                                        \
@@ -82,6 +85,8 @@ bool loadGLFunctions()
     LOAD(glUniform3f);
     LOAD(glUniform1i);
     LOAD(glUniform1f);
+
+    LOAD(glGenerateMipmap);
 
     return true;
 }

@@ -1,54 +1,80 @@
-#include <GLFW/glfw3.h>
+#include "Window.hpp"
 #include "gl_loader.hpp"
 #include "Shader.hpp"
+#include "Texture.hpp"
+#include "Matrix.hpp"
 #include <iostream>
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	glViewport(0, 0, width, height);
-	(void)window;
-}
-
-void processInput(GLFWwindow *window)
-{
-	if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-}
-
+// float vertices[] = {
+// 	// positions         // colors
+// 	 0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
+// 	-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
+// 	 0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f
+// };
 float vertices[] = {
-	// positions         // colors
-	 0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
-	-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
-	 0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f
+	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+	0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+	0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+	0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+	0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+	0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+	0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+	0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
 };
 
 int main() {
-	// ここからglfwの設定やwindowの設定
-	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "scop", nullptr, nullptr);
-	if (window == NULL)
-	{
-		std::cout << "Failed to create GLFW window" << std::endl;
-		glfwTerminate();
+	// ウィンドウ生成（GLFW・OpenGLコンテキスト込み）
+	Window window(SCR_WIDTH, SCR_HEIGHT, "scop");
+	if (!window.isReady())
 		return -1;
-	}
-	glfwMakeContextCurrent(window);
-	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	if (!loadGLFunctions())
-	{
-		std::cout << "Failed to load GL functions" << std::endl;
-		return -1;
-	}
-	glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
-	// ここまで
+
+	// 3D描画のため深度テストを有効化
+	glEnable(GL_DEPTH_TEST);
 
 	// シェダー読み込み
 	Shader shader("shaders/vertex.glsl", "shaders/fragment.glsl");
+
+	// テクスチャ読み込み
+	Texture tex1("resources/image/wall.bmp");
+	Texture tex2("resources/image/awesomeface.bmp");
+	if (!tex1.isReady() || !tex2.isReady())
+		return -1;
 
 	// ここからGPUにデータ登録
 	unsigned int VBO, VAO;
@@ -57,48 +83,61 @@ int main() {
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	// position: location = 0
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	// position: location = 0 (vec3)
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	// color: location = 1
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	// texcoord: location = 1 (vec2)
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	// ここまで
 
-	// 単位行列（列優先）
-	float identity[16] = {
-		1, 0, 0, 0,
-		0, 1, 0, 0,
-		0, 0, 1, 0,
-		0, 0, 0, 1
-	};
+	// サンプラーとテクスチャユニットの対応付け（一度だけ）
+	shader.use();
+	shader.setInt("texture1", 0);
+	shader.setInt("texture2", 1);
+
+	// MVP行列
+	Matrix model = Matrix::identity();
+	Matrix view = Matrix::lookAt(
+		0.0f, 0.0f, 3.0f,   // eye: カメラ位置
+		0.0f, 0.0f, 0.0f,   // center: 注視点
+		0.0f, 1.0f, 0.0f    // up: 上方向
+	);
+	Matrix projection = Matrix::perspective(
+		45.0f * 3.14159265f / 180.0f,
+		static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT),
+		0.1f, 100.0f
+	);
 
 	// ループ処理
-	while(!glfwWindowShouldClose(window))
+	while(!window.shouldClose())
 	{
-		processInput(window);
+		if (window.isKeyPressed(GLFW_KEY_ESCAPE))
+			window.setShouldClose(true);
+
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		tex1.bind(0);
+		tex2.bind(1);
 
 		shader.use();
-		shader.setMat4("model", identity);
-		shader.setMat4("view", identity);
-		shader.setMat4("projection", identity);
+		shader.setMat4("model", model.data());
+		shader.setMat4("view", view.data());
+		shader.setMat4("projection", projection.data());
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
-		glfwSwapBuffers(window);
-		glfwPollEvents();
+		window.swapBuffers();
+		window.pollEvents();
 	}
 
 	// ここから最終処理
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
-	glfwDestroyWindow(window);
-	glfwTerminate();
 	// ここまで
 	return 0;
 }

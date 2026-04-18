@@ -42,6 +42,8 @@ extern PFNGLUNIFORM3FPROC               glUniform3f;
 extern PFNGLUNIFORM1IPROC               glUniform1i;
 extern PFNGLUNIFORM1FPROC               glUniform1f;
 
-// テクスチャ系（glActiveTextureはOpenGL 1.3で libGL に直接含まれるためロード不要）
+// テクスチャ系（glGenTextures/glBindTexture/glTexImage2D/glTexParameteri/glDeleteTexturesはOpenGL 1.1で libGL に直接含まれる）
+// （glActiveTextureはOpenGL 1.3で libGL に直接含まれるためロード不要）
+extern PFNGLGENERATEMIPMAPPROC          glGenerateMipmap;
 
 bool loadGLFunctions();
