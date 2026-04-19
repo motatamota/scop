@@ -3,60 +3,13 @@
 #include "Shader.hpp"
 #include "Texture.hpp"
 #include "Matrix.hpp"
+#include "Operation.hpp"
+#include "Object.hpp"
+#include "Camera.hpp"
 #include <iostream>
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-
-// float vertices[] = {
-// 	// positions         // colors
-// 	 0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,
-// 	-0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,
-// 	 0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f
-// };
-float vertices[] = {
-	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-	0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-	0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-	0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-	0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-	0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-	0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-};
 
 int main() {
 	// ウィンドウ生成（GLFW・OpenGLコンテキスト込み）
@@ -76,13 +29,19 @@ int main() {
 	if (!tex1.isReady() || !tex2.isReady())
 		return -1;
 
+	// .obj ロード
+	Object cube;
+	if (!cube.loadFromFile("resources/42image/teapot.obj"))
+		return -1;
+	const std::vector<float>& mesh = cube.getMeshData();
+
 	// ここからGPUにデータ登録
 	unsigned int VBO, VAO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, mesh.size() * sizeof(float), mesh.data(), GL_STATIC_DRAW);
 	// position: location = 0 (vec3)
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
@@ -100,23 +59,32 @@ int main() {
 	shader.setInt("texture2", 1);
 
 	// MVP行列
-	Matrix model = Matrix::identity();
-	Matrix view = Matrix::lookAt(
-		0.0f, 0.0f, 3.0f,   // eye: カメラ位置
-		0.0f, 0.0f, 0.0f,   // center: 注視点
-		0.0f, 1.0f, 0.0f    // up: 上方向
-	);
-	Matrix projection = Matrix::perspective(
+	Camera camera;
+	camera += position_s{0.0f, 1.5f, 10.0f};  // teapot が映るよう後退
+	camera.lookAt(position_s{0.0f, 1.5f, 0.0f});
+	Matrix projection = Operation::perspective(
 		45.0f * 3.14159265f / 180.0f,
 		static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT),
 		0.1f, 100.0f
 	);
+
+	const float ROT_SPEED = 0.03f;  // ラジアン/フレーム
 
 	// ループ処理
 	while(!window.shouldClose())
 	{
 		if (window.isKeyPressed(GLFW_KEY_ESCAPE))
 			window.setShouldClose(true);
+
+		// 矢印キーで全オブジェクトを回転(左右=Y軸、上下=X軸)
+		if (window.isKeyPressed(GLFW_KEY_LEFT))
+			cube.rotate(0.0f, 1.0f, 0.0f, -ROT_SPEED);
+		if (window.isKeyPressed(GLFW_KEY_RIGHT))
+			cube.rotate(0.0f, 1.0f, 0.0f,  ROT_SPEED);
+		if (window.isKeyPressed(GLFW_KEY_UP))
+			cube.rotate(1.0f, 0.0f, 0.0f, -ROT_SPEED);
+		if (window.isKeyPressed(GLFW_KEY_DOWN))
+			cube.rotate(1.0f, 0.0f, 0.0f,  ROT_SPEED);
 
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -125,11 +93,13 @@ int main() {
 		tex2.bind(1);
 
 		shader.use();
+		Matrix model = cube.getModelMatrix();
+		Matrix view = camera.getViewMatrix();
 		shader.setMat4("model", model.data());
 		shader.setMat4("view", view.data());
 		shader.setMat4("projection", projection.data());
 		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(cube.getVertexCount()));
 
 		window.swapBuffers();
 		window.pollEvents();
