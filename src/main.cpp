@@ -29,29 +29,11 @@ int main() {
 	if (!tex1.isReady() || !tex2.isReady())
 		return -1;
 
-	// .obj ロード
+	// .obj ロード + GPU登録
 	Object cube;
 	if (!cube.loadFromFile("resources/42image/teapot.obj"))
 		return -1;
-	const std::vector<float>& mesh = cube.getMeshData();
-
-	// ここからGPUにデータ登録
-	unsigned int VBO, VAO;
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, mesh.size() * sizeof(float), mesh.data(), GL_STATIC_DRAW);
-	// position: location = 0 (vec3)
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
-	// texcoord: location = 1 (vec2)
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
-	// ここまで
+	cube.setupGPU();
 
 	// サンプラーとテクスチャユニットの対応付け（一度だけ）
 	shader.use();
@@ -98,16 +80,12 @@ int main() {
 		shader.setMat4("model", model.data());
 		shader.setMat4("view", view.data());
 		shader.setMat4("projection", projection.data());
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(cube.getVertexCount()));
+		cube.draw();
 
 		window.swapBuffers();
 		window.pollEvents();
 	}
 
-	// ここから最終処理
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
-	// ここまで
+	// VAO/VBO は Object のデストラクタで解放される
 	return 0;
 }

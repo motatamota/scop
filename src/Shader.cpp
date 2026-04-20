@@ -21,10 +21,17 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath)
 
 	glDeleteShader(vertex);
 	glDeleteShader(fragment);
+#ifdef DEBUG
+	std::cout << "[Shader] linked program ID=" << ID
+	          << " vertex=" << vertexPath << " fragment=" << fragmentPath << std::endl;
+#endif
 }
 
 Shader::~Shader()
 {
+#ifdef DEBUG
+	std::cout << "[Shader] destroying program ID=" << ID << std::endl;
+#endif
 	glDeleteProgram(ID);
 }
 

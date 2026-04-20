@@ -1,6 +1,9 @@
 #include "Camera.hpp"
 #include "Operation.hpp"
 #include <cmath>
+#ifdef DEBUG
+# include <iostream>
+#endif
 
 Camera::Camera()
 {
@@ -45,6 +48,12 @@ void Camera::lookAt(const position_s& target)
 	if (cosT < -1.0f) cosT = -1.0f;
 	float angle = std::acos(cosT);
 	orientation = Operation::quatFromAxisAngle(ax, ay, az, angle);
+#ifdef DEBUG
+	std::cout << "[Camera] lookAt target=(" << target.x << "," << target.y << "," << target.z << ")"
+	          << " angle=" << angle << "rad"
+	          << " quat=(" << orientation.w << "," << orientation.x
+	          << "," << orientation.y << "," << orientation.z << ")" << std::endl;
+#endif
 }
 
 Matrix Camera::getViewMatrix() const

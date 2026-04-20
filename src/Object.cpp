@@ -1,5 +1,6 @@
 #include "Object.hpp"
 #include "Operation.hpp"
+#include "gl_loader.hpp"
 #include <cstddef>
 #include <fstream>
 #include <iostream>
@@ -12,11 +13,21 @@ Object::Object()
 
 Object::~Object()
 {
+#ifdef DEBUG
+	if (VBO || VAO)
+		std::cout << "[Object] destroying VAO=" << VAO << " VBO=" << VBO << std::endl;
+#endif
+	if (VBO) glDeleteBuffers(1, &VBO);
+	if (VAO) glDeleteVertexArrays(1, &VAO);
 }
 
 Object& Object::operator+=(const position_s& delta)
 {
 	object_pos += delta;
+#ifdef DEBUG
+	std::cout << "[Object] pos += (" << delta.x << "," << delta.y << "," << delta.z << ")"
+	          << " → (" << object_pos.x << "," << object_pos.y << "," << object_pos.z << ")" << std::endl;
+#endif
 	return *this;
 }
 
@@ -138,10 +149,11 @@ bool Object::loadFromFile(const std::string& path)
 		mesh_data[i + 3] = (x - minX) / dx;
 		mesh_data[i + 4] = (y - minY) / dy;
 	}
-
-	std::cerr << "loaded: " << path
+#ifdef DEBUG
+	std::cout << "[Object] loadFromFile " << path
 	          << " verts=" << verts.size()
 	          << " triangles=" << (mesh_data.size() / 15) << std::endl;
+#endif
 	return true;
 }
 
@@ -153,4 +165,44 @@ const std::vector<float>& Object::getMeshData() const
 size_t Object::getVertexCount() const
 {
 	return mesh_data.size() / 5;
+}
+
+void Object::setupGPU()
+{
+	if (mesh_data.empty())
+	{
+#ifdef DEBUG
+		std::cout << "[Object] setupGPU skipped (mesh_data empty)" << std::endl;
+#endif
+		return;
+	}
+	if (VAO == 0) glGenVertexArrays(1, &VAO);
+	if (VBO == 0) glGenBuffers(1, &VBO);
+	glBindVertexArray(VAO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER,
+	             static_cast<GLsizeiptr>(mesh_data.size() * sizeof(float)),
+	             mesh_data.data(), GL_STATIC_DRAW);
+	// position: location = 0 (vec3)
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	// texcoord: location = 1 (vec2)
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+	                      (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+#ifdef DEBUG
+	std::cout << "[Object] setupGPU VAO=" << VAO << " VBO=" << VBO
+	          << " vertices=" << getVertexCount()
+	          << " bytes=" << (mesh_data.size() * sizeof(float)) << std::endl;
+#endif
+}
+
+void Object::draw() const
+{
+	if (VAO == 0)
+		return;
+	glBindVertexArray(VAO);
+	glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(getVertexCount()));
 }

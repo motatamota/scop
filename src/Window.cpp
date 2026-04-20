@@ -33,10 +33,18 @@ Window::Window(int width, int height, const char* title)
 
 	glViewport(0, 0, width, height);
 	ready = true;
+#ifdef DEBUG
+	std::cout << "[Window] created " << width << "x" << height
+	          << " title=\"" << title << "\" GL="
+	          << reinterpret_cast<const char*>(glGetString(GL_VERSION)) << std::endl;
+#endif
 }
 
 Window::~Window()
 {
+#ifdef DEBUG
+	std::cout << "[Window] destroying" << std::endl;
+#endif
 	if (window != nullptr)
 		glfwDestroyWindow(window);
 	glfwTerminate();

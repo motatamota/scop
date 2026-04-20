@@ -121,10 +121,19 @@ Texture::Texture(const char* path)
 	glGenerateMipmap(GL_TEXTURE_2D);
 
 	ready = true;
+#ifdef DEBUG
+	std::cout << "[Texture] loaded " << path
+	          << " ID=" << ID << " " << width << "x" << height
+	          << " bpp=" << bpp << std::endl;
+#endif
 }
 
 Texture::~Texture()
 {
+#ifdef DEBUG
+	if (ID != 0)
+		std::cout << "[Texture] destroying ID=" << ID << std::endl;
+#endif
 	if (ID != 0)
 		glDeleteTextures(1, &ID);
 }

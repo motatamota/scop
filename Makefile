@@ -3,6 +3,11 @@ NAME		= scop
 CXX		= c++
 CXXFLAGS	= -Wall -Wextra -Werror -std=c++17
 
+# DEBUG=1 でデバッグログを有効化 (make DEBUG=1)
+ifeq ($(DEBUG),1)
+CXXFLAGS	+= -DDEBUG -g
+endif
+
 SRC_DIR		= src
 OBJ_DIR		= obj
 INC_DIR		= includes
@@ -13,7 +18,8 @@ OBJS		= $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 INCLUDES	= -I$(INC_DIR)
 LIBS		= -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm
 
-all: $(NAME)
+# all: $(NAME)
+all: debug
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LIBS) -o $(NAME)
@@ -38,4 +44,8 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re install
+# デバッグビルド: 必ず作り直して -DDEBUG -g 付きでビルド
+debug: fclean
+	$(MAKE) DEBUG=1 $(NAME)
+
+.PHONY: all clean fclean re install debug

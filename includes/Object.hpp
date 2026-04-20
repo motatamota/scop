@@ -22,8 +22,19 @@ public:
 	// getMeshData().size() / 5 と等価 (glDrawArrays 用)
 	size_t getVertexCount() const;
 
+	// VAO/VBO を生成し mesh_data を GPU にアップロード(GLコンテキスト必須)
+	void setupGPU();
+	// VAO を bind して glDrawArrays を発行
+	void draw() const;
+
+	// GLリソースの二重解放を防ぐためコピー禁止
+	Object(const Object&) = delete;
+	Object& operator=(const Object&) = delete;
+
 protected:
 	position_s object_pos{};
 	Quaternion orientation{};
 	std::vector<float> mesh_data{};  // x,y,z,u,v の繰り返し
+	unsigned int VAO{0};
+	unsigned int VBO{0};
 };
