@@ -1,5 +1,19 @@
 #pragma once
 
+const unsigned int SCR_WIDTH = 1920;
+const unsigned int SCR_HEIGHT = 1080;
+const float ROT_SPEED = 0.1f;  // ラジアン/フレーム (USE_VSYNC=true 時の基準)
+const float COLOR_CHANGE_SPEED = 0.01f;  // 色変換速度 (同上)
+
+// V-Sync を使うかどうか。
+//   true  : glfwSwapInterval(1) で同期し、毎フレーム固定量を進める
+//   false : V-Sync 無効。fps が暴れるので dt 方式でフレーム独立に補正する
+// WSLg 等で V-Sync が効かない場合は false にする。
+constexpr bool USE_VSYNC = false;
+
+// USE_VSYNC=false の時に sleep で抑える目標 fps
+constexpr double TARGET_FPS = 60.0;
+
 struct position_s
 {
 	float x{};

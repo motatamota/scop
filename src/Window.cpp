@@ -1,4 +1,5 @@
 #include "Window.hpp"
+#include "Common.hpp"
 #include "gl_loader.hpp"
 #include <iostream>
 
@@ -19,7 +20,7 @@ Window::Window(int width, int height, const char* title)
 	}
 
 	glfwMakeContextCurrent(window);
-	glfwSwapInterval(1); // V-Syncを有効化（モニタのリフレッシュに同期）
+	glfwSwapInterval(USE_VSYNC ? 1 : 0); // V-Sync の有効化切替 (Common.hpp)
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
 	if (!loadGLFunctions())

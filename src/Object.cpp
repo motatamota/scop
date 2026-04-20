@@ -77,7 +77,7 @@ bool Object::loadFromFile(const std::string& path)
 	mesh_data.clear();
 
 	// バウンディングボックス (UV正規化用)
-	float minX = 0, maxX = 0, minY = 0, maxY = 0;
+	float minX = 0, maxX = 0, minY = 0, maxY = 0, minZ = 0, maxZ = 0;
 	bool first = true;
 
 	std::string line;
@@ -98,6 +98,7 @@ bool Object::loadFromFile(const std::string& path)
 			{
 				minX = maxX = p.x;
 				minY = maxY = p.y;
+				minZ = maxZ = p.z;
 				first = false;
 			}
 			else
@@ -106,6 +107,8 @@ bool Object::loadFromFile(const std::string& path)
 				if (p.x > maxX) maxX = p.x;
 				if (p.y < minY) minY = p.y;
 				if (p.y > maxY) maxY = p.y;
+				if (p.z < minZ) minZ = p.z;
+				if (p.z > maxZ) maxZ = p.z;
 			}
 		}
 		else if (tag == "f")
@@ -131,30 +134,69 @@ bool Object::loadFromFile(const std::string& path)
 					// UVはあとで埋める(スパン確定後)
 					mesh_data.push_back(0.0f);
 					mesh_data.push_back(0.0f);
+					// 色はあとで applyGrayPaletteScop() で埋める
+					mesh_data.push_back(0.0f);
+					mesh_data.push_back(0.0f);
+					mesh_data.push_back(0.0f);
 				}
 			}
 		}
-		// v/vn/vt/mtllib/usemtl/o/g/s は無視
+
 	}
+
+	// 中央調整用
+	float centerX = (minX + maxX) / 2.0f;
+	float centerY = (minY + maxY) / 2.0f;
+	float centerZ = (minZ + maxZ) / 2.0f;
 
 	// UVをxy平面への正規化プロジェクションで後書き
 	float dx = maxX - minX;
 	float dy = maxY - minY;
 	if (dx < 1e-6f) dx = 1.0f;
 	if (dy < 1e-6f) dy = 1.0f;
-	for (size_t i = 0; i + 4 < mesh_data.size(); i += 5)
+	for (size_t i = 0; i + 7 < mesh_data.size(); i += 8)
 	{
+		mesh_data[i] = mesh_data[i] - centerX;
+		mesh_data[i + 1] = mesh_data[i + 1] - centerY;
+		mesh_data[i + 2] = mesh_data[i + 2] - centerZ;
 		float x = mesh_data[i];
 		float y = mesh_data[i + 1];
 		mesh_data[i + 3] = (x - minX) / dx;
 		mesh_data[i + 4] = (y - minY) / dy;
 	}
+	// scop 固有: 面ごとに 5段階グレーを循環割当
+	applyGrayPaletteScop();
 #ifdef DEBUG
 	std::cout << "[Object] loadFromFile " << path
 	          << " verts=" << verts.size()
-	          << " triangles=" << (mesh_data.size() / 15) << std::endl;
+	          << " triangles=" << (mesh_data.size() / 24) << std::endl;
 #endif
 	return true;
+}
+
+void Object::applyGrayPaletteScop()
+{
+	// 5段階グレー (濃→淡)。subject の "subtle shades of gray" に合わせた中間トーン
+	static const float GRAY_PALETTE_SCOP[5] = {
+		0.30f, 0.45f, 0.60f, 0.75f, 0.90f
+	};
+	const size_t FLOATS_PER_VERTEX = 8;
+	const size_t VERTICES_PER_TRI  = 3;
+	const size_t triCount = mesh_data.size() / (FLOATS_PER_VERTEX * VERTICES_PER_TRI);
+	for (size_t tri = 0; tri < triCount; ++tri)
+	{
+		float g = GRAY_PALETTE_SCOP[tri % 5];
+		for (size_t k = 0; k < VERTICES_PER_TRI; ++k)
+		{
+			size_t base = (tri * VERTICES_PER_TRI + k) * FLOATS_PER_VERTEX;
+			mesh_data[base + 5] = g;
+			mesh_data[base + 6] = g;
+			mesh_data[base + 7] = g;
+		}
+	}
+#ifdef DEBUG
+	std::cout << "[Object] applyGrayPaletteScop triangles=" << triCount << std::endl;
+#endif
 }
 
 const std::vector<float>& Object::getMeshData() const
@@ -164,7 +206,7 @@ const std::vector<float>& Object::getMeshData() const
 
 size_t Object::getVertexCount() const
 {
-	return mesh_data.size() / 5;
+	return mesh_data.size() / 8;
 }
 
 void Object::setupGPU()
@@ -184,12 +226,16 @@ void Object::setupGPU()
 	             static_cast<GLsizeiptr>(mesh_data.size() * sizeof(float)),
 	             mesh_data.data(), GL_STATIC_DRAW);
 	// position: location = 0 (vec3)
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	// texcoord: location = 1 (vec2)
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
 	                      (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(1);
+	// color (scop グレー): location = 2 (vec3)
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+	                      (void*)(5 * sizeof(float)));
+	glEnableVertexAttribArray(2);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 #ifdef DEBUG
