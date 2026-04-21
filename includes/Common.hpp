@@ -4,6 +4,7 @@ const unsigned int SCR_WIDTH = 1920;
 const unsigned int SCR_HEIGHT = 1080;
 const float ROT_SPEED = 0.1f;  // ラジアン/フレーム (USE_VSYNC=true 時の基準)
 const float COLOR_CHANGE_SPEED = 0.01f;  // 色変換速度 (同上)
+const float ZOOM_SPEED_RATIO = 0.02f;    // 1フレームで camDist の何倍だけ前後するか
 
 // V-Sync を使うかどうか。
 //   true  : glfwSwapInterval(1) で同期し、毎フレーム固定量を進める

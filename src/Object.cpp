@@ -1,6 +1,7 @@
 #include "Object.hpp"
 #include "Operation.hpp"
 #include "gl_loader.hpp"
+#include <cmath>
 #include <cstddef>
 #include <fstream>
 #include <iostream>
@@ -152,8 +153,12 @@ bool Object::loadFromFile(const std::string& path)
 	// UVをxy平面への正規化プロジェクションで後書き
 	float dx = maxX - minX;
 	float dy = maxY - minY;
+	float dz = maxZ - minZ;
 	if (dx < 1e-6f) dx = 1.0f;
 	if (dy < 1e-6f) dy = 1.0f;
+
+	// AABB を包む球の半径 (中心からコーナーまでの距離)
+	bounding_radius = 0.5f * std::sqrt(dx * dx + dy * dy + dz * dz);
 	for (size_t i = 0; i + 7 < mesh_data.size(); i += 8)
 	{
 		mesh_data[i] = mesh_data[i] - centerX;
@@ -172,6 +177,11 @@ bool Object::loadFromFile(const std::string& path)
 	          << " triangles=" << (mesh_data.size() / 24) << std::endl;
 #endif
 	return true;
+}
+
+float Object::getBoundingRadius() const
+{
+	return bounding_radius;
 }
 
 void Object::applyGrayPaletteScop()

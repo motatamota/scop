@@ -26,6 +26,9 @@ public:
 	// (subject の "different faces visually distinguishable" 要件用)
 	void applyGrayPaletteScop();
 
+	// 中心調整後の AABB を包む球の半径。カメラ距離計算などに使う
+	float getBoundingRadius() const;
+
 	// VAO/VBO を生成し mesh_data を GPU にアップロード(GLコンテキスト必須)
 	void setupGPU();
 	// VAO を bind して glDrawArrays を発行
@@ -41,4 +44,5 @@ protected:
 	std::vector<float> mesh_data{};  // x,y,z,u,v,r,g,b の繰り返し
 	unsigned int VAO{0};
 	unsigned int VBO{0};
+	float bounding_radius{0.0f};  // loadFromFile で計算
 };

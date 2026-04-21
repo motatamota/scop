@@ -9,6 +9,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <cmath>
 
 
 int main(int ac, char **av) {
@@ -29,32 +30,45 @@ int main(int ac, char **av) {
 		return -1;
 
 	// .obj ロード + GPU登録
-	Object cube;
+	Object obj;
 	if (ac == 1)
 	{
-		if (!cube.loadFromFile("resources/42image/42.obj"))
+		// if (!obj.loadFromFile("resources/42image/xyzrgb_dragon.obj"))
+		if (!obj.loadFromFile("resources/42image/42.obj"))
 			return -1;
 	}
 	else
 	{
-		if (!cube.loadFromFile(av[1]))
+		if (!obj.loadFromFile(av[1]))
 			return -1;
 	}
-	cube.setupGPU();
+	obj.setupGPU();
 
 	// サンプラーとテクスチャユニットの対応付け（一度だけ）
 	shader.use();
 	shader.setInt("texture1", 0);
 
-	// MVP行列
+	// カメラ距離をオブジェクトサイズから自動計算
+	// d = R / tan(fovY/2) で縦方向に収まる + 余裕2倍
+	const float FOV_Y_RAD = 45.0f * 3.14159265f / 180.0f;
+	const float radius = obj.getBoundingRadius();
+	const float camDist = (radius > 0.0f)
+		? radius / std::tan(FOV_Y_RAD * 0.5f) * 2.0f
+		: 10.0f;
+
 	Camera camera;
-	camera += position_s{0.0f, 0.0f, 10.0f};
+	camera += position_s{0.0f, 0.0f, camDist};
 	camera.lookAt(position_s{0.0f, 0.0f, 0.0f});
+	float camZ = camDist;  // W/S ズーム用。最小 0 でクランプ
 	Matrix projection = Operation::perspective(
-		45.0f * 3.14159265f / 180.0f,
+		FOV_Y_RAD,
 		static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT),
-		0.1f, 100.0f
+		0.1f, camDist * 4.0f  // far plane もスケールに追従
 	);
+#ifdef DEBUG
+	std::cout << "[Camera] auto-fit radius=" << radius
+	          << " distance=" << camDist << std::endl;
+#endif
 
 	float blend = 0.0f; // 実際の補間値
 	bool  mode = false;
@@ -86,18 +100,39 @@ int main(int ac, char **av) {
 		prevFrameTime = now;
 		const float stepScale = USE_VSYNC ? 1.0f : dt * 60.0f;
 
+		// 常に少しずつ回転
+		obj.rotate(0.0f, 1.0f, 0.0f, -ROT_SPEED * stepScale / 20.0f);
+
 		if (window.isKeyPressed(GLFW_KEY_ESCAPE))
 			window.setShouldClose(true);
 
 		// 矢印キーで全オブジェクトを回転(左右=Y軸、上下=X軸)
 		if (window.isKeyPressed(GLFW_KEY_LEFT))
-			cube.rotate(0.0f, 1.0f, 0.0f, -ROT_SPEED * stepScale);
+			obj.rotate(0.0f, 1.0f, 0.0f, -ROT_SPEED * stepScale);
 		if (window.isKeyPressed(GLFW_KEY_RIGHT))
-			cube.rotate(0.0f, 1.0f, 0.0f,  ROT_SPEED * stepScale);
+			obj.rotate(0.0f, 1.0f, 0.0f,  ROT_SPEED * stepScale);
 		if (window.isKeyPressed(GLFW_KEY_UP))
-			cube.rotate(1.0f, 0.0f, 0.0f, -ROT_SPEED * stepScale);
+			obj.rotate(1.0f, 0.0f, 0.0f, -ROT_SPEED * stepScale);
 		if (window.isKeyPressed(GLFW_KEY_DOWN))
-			cube.rotate(1.0f, 0.0f, 0.0f,  ROT_SPEED * stepScale);
+			obj.rotate(1.0f, 0.0f, 0.0f,  ROT_SPEED * stepScale);
+		if (window.isKeyPressed(GLFW_KEY_Q))
+			obj.rotate(0.0f, 0.0f, 1.0f,  ROT_SPEED * stepScale);
+		if (window.isKeyPressed(GLFW_KEY_E))
+			obj.rotate(0.0f, 0.0f, 1.0f,  -ROT_SPEED * stepScale);
+		// W/S でズーム。カメラは +Z 軸上にあるので W=Zを減らす、S=Zを増やす
+		// 最小 Z=0 (オブジェクト位置) でクランプ
+		const float zoomStep = camDist * ZOOM_SPEED_RATIO * stepScale;
+		if (window.isKeyPressed(GLFW_KEY_W))
+		{
+			float newZ = std::max(0.0f, camZ - zoomStep);
+			camera += position_s{0.0f, 0.0f, newZ - camZ};
+			camZ = newZ;
+		}
+		if (window.isKeyPressed(GLFW_KEY_S))
+		{
+			camera += position_s{0.0f, 0.0f, zoomStep};
+			camZ += zoomStep;
+		}
 		// 色切り替え終了ならば変更
 		if (window.isKeyPressed(GLFW_KEY_SPACE) && (blend == 0.0f || blend == 1.0f))
 			mode = !mode;
@@ -128,12 +163,12 @@ int main(int ac, char **av) {
 
 		shader.use();
 		shader.setFloat("blend", blend); // 色情報付与
-		Matrix model = cube.getModelMatrix();
+		Matrix model = obj.getModelMatrix();
 		Matrix view = camera.getViewMatrix();
 		shader.setMat4("model", model.data());
 		shader.setMat4("view", view.data());
 		shader.setMat4("projection", projection.data());
-		cube.draw();
+		obj.draw();
 
 		window.swapBuffers(); // スリープ用(映像切り替えも)
 		window.pollEvents(); // キー入力対応
