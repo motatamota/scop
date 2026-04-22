@@ -18,8 +18,8 @@ OBJS		= $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 INCLUDES	= -I$(INC_DIR)
 LIBS		= -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm
 
-all: $(NAME)
-# all: debug
+# all: $(NAME)
+all: debug
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LIBS) -o $(NAME)
@@ -44,8 +44,12 @@ fclean: clean
 
 re: fclean all
 
+bonus:
+	touch bonus
+
 # デバッグビルド: 必ず作り直して -DDEBUG -g 付きでビルド
 debug: fclean
 	$(MAKE) DEBUG=1 $(NAME)
+	rm -f bonus
 
 .PHONY: all clean fclean re install debug
