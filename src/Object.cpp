@@ -41,6 +41,12 @@ void Object::rotate(float axisX, float axisY, float axisZ, float angleRadians)
 	orientation = Operation::quatNormalize(orientation);
 }
 
+void Object::reset()
+{
+	object_pos = position_s{};
+	orientation = Quaternion{};
+}
+
 Matrix Object::getModelMatrix() const
 {
 	// model = translate(pos) * rotation(orientation)

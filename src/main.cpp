@@ -13,6 +13,19 @@
 
 
 int main(int ac, char **av) {
+	std::cout
+		<< "=== scop controls ===\n"
+		<< "  Arrows      : rotate (Left/Right=Y, Up/Down=X)\n"
+		<< "  Q / E       : rotate Z\n"
+		<< "  W / S       : translate Y (up/down)\n"
+		<< "  A / D       : translate X (left/right)\n"
+		<< "  R / F       : translate Z (forward/back)\n"
+		<< "  SPACE       : reset position & rotation\n"
+		<< "  C           : toggle color <-> texture (smooth)\n"
+		<< "  P           : toggle auto-rotation\n"
+		<< "  ESC         : quit\n"
+		<< "=====================" << std::endl;
+
 	// ウィンドウ生成（GLFW・OpenGLコンテキスト込み）
 	Window window(SCR_WIDTH, SCR_HEIGHT, "scop");
 	if (!window.isReady())
@@ -25,7 +38,7 @@ int main(int ac, char **av) {
 	Shader shader("shaders/vertex.glsl", "shaders/fragment.glsl");
 
 	// テクスチャ読み込み
-	Texture tex1("resources/image/wall.bmp");
+	Texture tex1("resources/image/macaron.bmp");
 	if (!tex1.isReady())
 		return -1;
 
@@ -59,7 +72,6 @@ int main(int ac, char **av) {
 	Camera camera;
 	camera += position_s{0.0f, 0.0f, camDist};
 	camera.lookAt(position_s{0.0f, 0.0f, 0.0f});
-	float camZ = camDist;  // W/S ズーム用。最小 0 でクランプ
 	Matrix projection = Operation::perspective(
 		FOV_Y_RAD,
 		static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT),
@@ -72,6 +84,8 @@ int main(int ac, char **av) {
 
 	float blend = 0.0f; // 実際の補間値
 	bool  mode = false;
+	bool  paused = false;  // P で自動回転の一時停止
+	bool  prevP = false;   // P の押下エッジ検出用
 
 	// FPS 計測: 1秒ごとに平均 fps を出力
 	double fpsLastTime = glfwGetTime();
@@ -100,8 +114,15 @@ int main(int ac, char **av) {
 		prevFrameTime = now;
 		const float stepScale = USE_VSYNC ? 1.0f : dt * 60.0f;
 
-		// 常に少しずつ回転
-		obj.rotate(0.0f, 1.0f, 0.0f, -ROT_SPEED * stepScale / 20.0f);
+		// P の押下エッジで自動回転トグル
+		bool curP = window.isKeyPressed(GLFW_KEY_P);
+		if (curP && !prevP)
+			paused = !paused;
+		prevP = curP;
+
+		// 常に少しずつ回転 (一時停止中はスキップ)
+		if (!paused)
+			obj.rotate(0.0f, 1.0f, 0.0f, -ROT_SPEED * stepScale / 20.0f);
 
 		if (window.isKeyPressed(GLFW_KEY_ESCAPE))
 			window.setShouldClose(true);
@@ -119,22 +140,26 @@ int main(int ac, char **av) {
 			obj.rotate(0.0f, 0.0f, 1.0f,  ROT_SPEED * stepScale);
 		if (window.isKeyPressed(GLFW_KEY_E))
 			obj.rotate(0.0f, 0.0f, 1.0f,  -ROT_SPEED * stepScale);
-		// W/S でズーム。カメラは +Z 軸上にあるので W=Zを減らす、S=Zを増やす
-		// 最小 Z=0 (オブジェクト位置) でクランプ
-		const float zoomStep = camDist * ZOOM_SPEED_RATIO * stepScale;
+		// W/A/S/D/R/F でオブジェクトを3軸双方向に平行移動
+		// W/S = Y軸(上/下), A/D = X軸(左/右), R/F = Z軸(手前/奥)
+		const float moveStep = radius * MOVE_SPEED_RATIO * stepScale;
 		if (window.isKeyPressed(GLFW_KEY_W))
-		{
-			float newZ = std::max(0.0f, camZ - zoomStep);
-			camera += position_s{0.0f, 0.0f, newZ - camZ};
-			camZ = newZ;
-		}
+			obj += position_s{0.0f,  -moveStep, 0.0f};
 		if (window.isKeyPressed(GLFW_KEY_S))
-		{
-			camera += position_s{0.0f, 0.0f, zoomStep};
-			camZ += zoomStep;
-		}
-		// 色切り替え終了ならば変更
-		if (window.isKeyPressed(GLFW_KEY_SPACE) && (blend == 0.0f || blend == 1.0f))
+			obj += position_s{0.0f, moveStep, 0.0f};
+		if (window.isKeyPressed(GLFW_KEY_A))
+			obj += position_s{moveStep, 0.0f, 0.0f};
+		if (window.isKeyPressed(GLFW_KEY_D))
+			obj += position_s{-moveStep, 0.0f, 0.0f};
+		if (window.isKeyPressed(GLFW_KEY_R))
+			obj += position_s{0.0f, 0.0f,  moveStep};
+		if (window.isKeyPressed(GLFW_KEY_F))
+			obj += position_s{0.0f, 0.0f, -moveStep};
+		// SPACE で初期位置・初期回転に戻す
+		if (window.isKeyPressed(GLFW_KEY_SPACE))
+			obj.reset();
+		// C で色/テクスチャ切替 (遷移中は無視)
+		if (window.isKeyPressed(GLFW_KEY_C) && (blend == 0.0f || blend == 1.0f))
 			mode = !mode;
 		if (mode)
 		{
@@ -156,7 +181,11 @@ int main(int ac, char **av) {
 		else if (blend > blend)
 			blend = std::max(blend, blend - SPEED);
 
-		glClearColor(0.18f, 0.18f, 0.20f, 1.0f);
+		// glClearColor(0.18f, 0.18f, 0.20f, 1.0f);
+		// glClearColor(0.13f, 0.14f, 0.16f, 1.0f);  // 濃紺寄りのチャコール
+		// glClearColor(0.50f, 0.50f, 0.50f, 1.0f);  // 18% graycard 相当
+		glClearColor(0.14f, 0.13f, 0.12f, 1.0f);  // 炭のような温かい黒
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		tex1.bind(0);

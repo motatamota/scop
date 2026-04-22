@@ -12,6 +12,8 @@ public:
 
 	Object& operator+=(const position_s& delta);
 	void rotate(float axisX, float axisY, float axisZ, float angleRadians);
+	// 位置と姿勢を初期値 (原点 / 無回転) に戻す
+	void reset();
 
 	Matrix getModelMatrix() const;
 
