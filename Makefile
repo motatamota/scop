@@ -18,8 +18,7 @@ OBJS		= $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRCS))
 INCLUDES	= -I$(INC_DIR)
 LIBS		= -lglfw -lGL -lX11 -lpthread -lXrandr -lXi -ldl -lm
 
-# all: $(NAME)
-all: debug
+all: $(NAME)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LIBS) -o $(NAME)

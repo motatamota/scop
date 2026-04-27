@@ -101,10 +101,8 @@ int main(int ac, char **av) {
 		double now = glfwGetTime();
 		if (now - fpsLastTime >= 1.0)
 		{
-#ifdef DEBUG
 			double fps = fpsFrames / (now - fpsLastTime);
 			std::cout << "[FPS] " << fps << std::endl;
-#endif
 			fpsFrames = 0;
 			fpsLastTime = now;
 		}
